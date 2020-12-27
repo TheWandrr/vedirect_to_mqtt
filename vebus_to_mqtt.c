@@ -31,7 +31,7 @@ pthread_mutex_t lock_request_list;
 const char *mqtt_host = "192.168.43.57";
 const unsigned int mqtt_port = 1883;
 const char *bmv_topic_root = "bmv/";
-const unsigned int min_request_period_us = 250000; // Too fast and the BMV will miss requests
+const unsigned int min_request_period_us = 50000; // Too fast and the BMV will miss requests
 
 // TODO: Replace with dynamic FIFO/circular buffer
 unsigned int request_list[32]; // Added to periodically, processed immediately with small delay between
@@ -39,7 +39,8 @@ unsigned int request_count = 0;
 
 enum ReceiveState {
     GET_START_CHAR,
-    GET_DATA,
+    GET_HEX_DATA,
+    GET_TEXT_DATA,
 };
 
 struct VEPeriodicRequest {
@@ -52,11 +53,11 @@ struct VEPeriodicRequest {
 
 // NOTE: At least one of these should be set to a period less than 1 second or so to prevent the BMV from sending it's VE.Direct crap
 struct VEPeriodicRequest periodic_request_list[] = {
-    { false, "id", 1, 0 },
-    { true, "soc", 2, 0 },
-    { true, "current_coarse", 2, 0 },
-    { true, "consumed_ah", 2, 0 },
-    { true, "main_voltage", 2, 0 },
+//    { false, "id", 1, 0 },
+//    { true, "soc", 2, 0 },
+//    { true, "current_coarse", 2, 0 },
+//    { true, "consumed_ah", 2, 0 },
+//    { true, "main_voltage", 2, 0 },
 };
 
 double timestamp(void) {
@@ -134,7 +135,11 @@ void *ProcessUARTTransmitQueueThread(void *param) {
     }
 }
 
-void ParseMessage(char *msg_buf) {
+void ParseTextMessage(char *msg_buf) {
+    printf("ParseTextMessage(%s)\r\n", msg_buf); fflush(NULL);
+}
+
+void ParseHexMessage(char *msg_buf) {
     double now;
     struct VEDirectMsg vedirect_msg;
     unsigned int msg_len;
@@ -146,7 +151,7 @@ void ParseMessage(char *msg_buf) {
     char mqtt_topic[50];
     char mqtt_payload[50];
 
-    //printf("ParseMessage(%s)\r\n", msg_buf);
+    //printf("ParseHexMessage(%s)\r\n", msg_buf);
 
     now = timestamp(); // Calculate/display time between request being sent and receipt of message
     msg_len = strlen(msg_buf);
@@ -302,15 +307,21 @@ void *ProcessReceiveThread(void *param) {
 //            printf("%c", serialGetchar(fd));
 
             switch(receive_state) {
+
                 case GET_START_CHAR:
-                    if( (c = serialGetchar(fd)) == ':' ) {
+                    c = serialGetchar(fd);
+                    if( c  == ':' ) {
                         //DEBUG//printf("<SOL>");
                         strncpy(message_buffer, "", sizeof(message_buffer));
-                        receive_state = GET_DATA;
+                        receive_state = GET_HEX_DATA;
+                    }
+                    else if( c == '\n') {
+                        strncpy(message_buffer, "", sizeof(message_buffer));
+                        receive_state = GET_TEXT_DATA;
                     }
                 break;
 
-                case GET_DATA:
+                case GET_HEX_DATA:
                     c = serialGetchar(fd);
 
                     if( isprint(c) ) {
@@ -320,7 +331,7 @@ void *ProcessReceiveThread(void *param) {
                     }
                     else if( c == '\n' ) {
                         //DEBUG//printf("<EOL>\r\n");
-                        ParseMessage(message_buffer);
+                        ParseHexMessage(message_buffer);
                         receive_state = GET_START_CHAR;
                     }
                     else if( c == ':' ) {
@@ -328,6 +339,20 @@ void *ProcessReceiveThread(void *param) {
                         ////Serial.print("   <<<   MISSING ETX\r\n<RECOVER-STX>");
                         printf("<UART> ERROR: New packet began before previous packet finished\r\n");
                         strncpy(message_buffer, "", sizeof(message_buffer));
+                    }
+                break;
+
+                case GET_TEXT_DATA:
+                    c = serialGetchar(fd);
+
+                    if( c == '\n' ) {
+                        //DEBUG//printf("<EOL>\r\n");
+                        ParseTextMessage(message_buffer);
+                        receive_state = GET_START_CHAR;
+                    }
+                    else if( c == '\r' ) { /* ignore */ }
+                    else {
+                        strncat(message_buffer, &c, 1);
                     }
                 break;
 
