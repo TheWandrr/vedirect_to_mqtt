@@ -4,8 +4,6 @@ This is a service for bridging Victron Energy's VE.Direct protocol to MQTT.  Ori
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
-
 ### Prerequisites
 
 Requires mosquitto runtime and development libraries (websockets not used)
