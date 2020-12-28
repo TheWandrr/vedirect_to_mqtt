@@ -30,7 +30,7 @@ pthread_mutex_t lock_request_list;
 
 const char *mqtt_host = "192.168.43.57";
 const unsigned int mqtt_port = 1883;
-const char *bmv_topic_root = "bmv/";
+const char *bmv_topic_root = "bmv";
 const unsigned int min_request_period_us = 50000; // Too fast and the BMV will miss requests
 
 // TODO: Replace with dynamic FIFO/circular buffer
@@ -51,13 +51,13 @@ struct VEPeriodicRequest {
 //    float publish_period_s;
 };
 
-// NOTE: At least one of these should be set to a period less than 1 second or so to prevent the BMV from sending it's VE.Direct crap
+// TODO: Add command line switch or similar to control the request list
+// NOTE: Setting any of these less than about 2 seconds can prevent the automatic VE.Direct TEXT protocol from being output
 struct VEPeriodicRequest periodic_request_list[] = {
-//    { false, "id", 1, 0 },
-//    { true, "soc", 2, 0 },
-//    { true, "current_coarse", 2, 0 },
-//    { true, "consumed_ah", 2, 0 },
-//    { true, "main_voltage", 2, 0 },
+    { true, "soc", 3, 0 },
+    { true, "current_coarse", 3, 0 },
+    { true, "consumed_ah", 3, 0 },
+    { true, "main_voltage", 3, 0 },
 };
 
 double timestamp(void) {
@@ -136,12 +136,85 @@ void *ProcessUARTTransmitQueueThread(void *param) {
 }
 
 void ParseTextMessage(char *msg_buf) {
-    printf("ParseTextMessage(%s)\r\n", msg_buf); fflush(NULL);
+    struct VEDirectTextMsg vedirect_msg;
+    char *token;
+    const char sep[2] = "\t";
+    char reg_name[10];
+    char value_string[34];
+    long reg_value;
+    char mqtt_topic[50];
+    char mqtt_payload[50];
+
+    //printf("ParseTextMessage(%s)\r\n", msg_buf); fflush(NULL);
+
+    token = strtok(msg_buf, sep);
+    if (token != NULL) {
+        strcpy(reg_name, token);
+    }
+
+    token = strtok(NULL, sep);
+    if (token != NULL) {
+        strcpy(value_string, token);
+        reg_value = atoi(value_string);
+    }
+
+    //DEBUG//printf("%s = %d\r\n", reg_name, reg_value); fflush(NULL);
+
+    if( ve_lookup_by_text_name(&vedirect_msg, reg_name) ) {
+        switch(vedirect_msg.type) {
+
+            case VE_TYPE_TXT_FLOAT:
+                //DEBUG//printf("--> Found %s = %0.3f\r\n", vedirect_msg.name, reg_value * vedirect_msg.multiplier); fflush(NULL);
+
+                if( !strcmp(value_string, "---") ) {
+                    sprintf(mqtt_payload, ""); // TODO: This might not be the best way to indicate invalid data
+                }
+                else {
+                    sprintf(mqtt_payload, "%0.3f", reg_value * vedirect_msg.multiplier);
+                }
+                break;
+
+            case VE_TYPE_TXT_INT:
+                //DEBUG//printf("--> Found %s = %0.3f\r\n", vedirect_msg.name, reg_value * vedirect_msg.multiplier); fflush(NULL);
+
+                if( !strcmp(value_string, "---") ) {
+                    sprintf(mqtt_payload, ""); // TODO: This might not be the best way to indicate invalid data
+                }
+                else {
+                    sprintf(mqtt_payload, "%ld", reg_value);
+                }
+                break;
+
+            case VE_TYPE_TXT_BOOL:
+                //DEBUG//printf("--> Found %s = %s\r\n", vedirect_msg.name, value_string); fflush(NULL);
+
+                if( !strcmp(value_string, "ON") ) {
+                    sprintf(mqtt_payload, "1");
+                }
+                else if( !strcmp(value_string, "OFF") ) {
+                    sprintf(mqtt_payload, "0");
+                }
+                else {
+                    sprintf(mqtt_payload, ""); // TODO: This might not be the best way to indicate invalid data
+                }
+
+                break;
+        }
+
+        sprintf(mqtt_topic, "%s/text/%s", bmv_topic_root, vedirect_msg.name);
+
+        printf("<<< <MQTT> Publish %s = %s\r\n", mqtt_topic, mqtt_payload); fflush(NULL);
+        mosquitto_publish(mqtt, NULL, mqtt_topic, strlen(mqtt_payload), mqtt_payload, 0, false);
+    }
+    else {
+        //DEBUG//printf("--> NOT FOUND %s\r\n", reg_name); fflush(NULL);
+    }
+
 }
 
 void ParseHexMessage(char *msg_buf) {
     double now;
-    struct VEDirectMsg vedirect_msg;
+    struct VEDirectHexMsg vedirect_msg;
     unsigned int msg_len;
     char c;
     unsigned int address = 0;
@@ -171,7 +244,7 @@ void ParseHexMessage(char *msg_buf) {
                       ( asciiHexToInt(*(msg_buf + 2)) << 12 ) +
                       ( asciiHexToInt(*(msg_buf + 3)) << 8 );
 
-            if( ve_lookup_by_address(&vedirect_msg, address) ) {
+            if( ve_lookup_by_hex_address(&vedirect_msg, address) ) {
 
                 //printf("Parsing data from %s [%0.4x], length = %d\r\n", vedirect_msg.name, address, msg_len);
 
@@ -280,11 +353,12 @@ void ParseHexMessage(char *msg_buf) {
                         for (int i = 0; i < ( sizeof(periodic_request_list) / sizeof(struct VEPeriodicRequest) ); i++ ) {
                             if( !strcmp(periodic_request_list[i].name, vedirect_msg.name) ) {
                                 if( periodic_request_list[i].publish ) {
-                                    sprintf(mqtt_topic, "%s%s", bmv_topic_root, vedirect_msg.name);
+                                    sprintf(mqtt_topic, "%s/hex/%s", bmv_topic_root, vedirect_msg.name);
                                     sprintf(mqtt_payload, "%0.2f", data);
+
+                                    printf("<<< <MQTT> Publish %s = %s\r\n", mqtt_topic, mqtt_payload); fflush(NULL);
                                     mosquitto_publish(mqtt, NULL, mqtt_topic, strlen(mqtt_payload), mqtt_payload, 0, false);
                                 }
-                                break;
                             }
                         }
 
@@ -304,12 +378,22 @@ void *ProcessReceiveThread(void *param) {
 
         if(serialDataAvail(fd)) {
 
-//            printf("%c", serialGetchar(fd));
+            c = serialGetchar(fd);
+
+            //DEBUG
+            //if ( isprint(c) ) {
+            //    printf( "%c", c );
+            //}
+            //else {
+            //    printf( "<%0.2X>", (uint8_t)c );
+            //}
+            //
+            //fflush(NULL);
 
             switch(receive_state) {
 
                 case GET_START_CHAR:
-                    c = serialGetchar(fd);
+
                     if( c  == ':' ) {
                         //DEBUG//printf("<SOL>");
                         strncpy(message_buffer, "", sizeof(message_buffer));
@@ -322,7 +406,6 @@ void *ProcessReceiveThread(void *param) {
                 break;
 
                 case GET_HEX_DATA:
-                    c = serialGetchar(fd);
 
                     if( isprint(c) ) {
                         // Valid data, save/buffer it for later
@@ -336,28 +419,32 @@ void *ProcessReceiveThread(void *param) {
                     }
                     else if( c == ':' ) {
                         // ERROR - expected ETX before STX
-                        ////Serial.print("   <<<   MISSING ETX\r\n<RECOVER-STX>");
-                        printf("<UART> ERROR: New packet began before previous packet finished\r\n");
+                        //printf("<UART> ERROR: New packet began before previous packet finished\r\n");
                         strncpy(message_buffer, "", sizeof(message_buffer));
                     }
                 break;
 
                 case GET_TEXT_DATA:
-                    c = serialGetchar(fd);
 
-                    if( c == '\n' ) {
+                    if( c == '\r' ) {
                         //DEBUG//printf("<EOL>\r\n");
                         ParseTextMessage(message_buffer);
                         receive_state = GET_START_CHAR;
                     }
-                    else if( c == '\r' ) { /* ignore */ }
+                    else if( c == '\n' ) {
+                        //printf("<UART> ERROR: New packet began before previous packet finished\r\n");
+                        strncpy(message_buffer, "", sizeof(message_buffer));
+                    }
+                    else if( c == ':' ) {
+                        receive_state = GET_HEX_DATA;
+                        strncpy(message_buffer, "", sizeof(message_buffer));
+                    }
                     else {
                         strncat(message_buffer, &c, 1);
                     }
                 break;
 
             }
-
         }
     }
 }
@@ -365,7 +452,7 @@ void *ProcessReceiveThread(void *param) {
 void *ProcessVEDirectRequestThread(void *param) {
     double now;
     char message_buffer[50] = {0};
-    struct VEDirectMsg vedirect_msg;
+    struct VEDirectHexMsg vedirect_msg;
 
     while(running) {
         // TODO: Replace the static structure with a dynamic one
@@ -379,7 +466,7 @@ void *ProcessVEDirectRequestThread(void *param) {
                 //printf("REQUEST %s [%0.3f]\r\n", periodic_request_list[i].name, (now - periodic_request_list[i].last_update_s) );
                 periodic_request_list[i].last_update_s = now;
 
-                if( ve_lookup_by_name(&vedirect_msg, periodic_request_list[i].name) ) {
+                if( ve_lookup_by_hex_name(&vedirect_msg, periodic_request_list[i].name) ) {
 
                     pthread_mutex_lock(&lock_request_list);
                     if( request_count < (sizeof(request_list) - 1) ) {

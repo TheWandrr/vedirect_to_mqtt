@@ -33,7 +33,7 @@ enum VECommand {
 #define VE_RSP_FLG_UNSUPPORTED 0x02
 #define VE_RSP_FLG_PARAMETER_ERROR 0x04
 
-enum VEDirectType {
+enum VEDirectHexType {
     VE_TYPE_NONE,
     VE_TYPE_UN8,
     VE_TYPE_SN8,
@@ -47,22 +47,82 @@ enum VEDirectType {
     VE_TYPE_STR32,
 };
 
-struct VEDirectMsg {
+enum VEDirectTextType {
+    VE_TYPE_TXT_BOOL,
+    VE_TYPE_TXT_INT,
+    VE_TYPE_TXT_FLOAT,
+};
+
+// Alarm reasons, associated with "AR" text value
+#define VE_AR_MASK_LOW_VOLTAGE          0b0000000000000001
+#define VE_AR_MASK_HIGH_VOLTAGE         0b0000000000000010
+#define VE_AR_MASK_LOW_SOC              0b0000000000000100
+#define VE_AR_MASK_LOW_STARTER_VOLTAGE  0b0000000000001000
+#define VE_AR_MASK_HIGH_STARTER_VOLTAGE 0b0000000000010000
+#define VE_AR_MASK_LOW_TEMPERATURE      0b0000000000100000
+#define VE_AR_MASK_HIGH_TEMPERATURE     0b0000000001000000
+#define VE_AR_MASK_MID_VOLTAGE          0b0000000010000000
+#define VE_AR_MASK_OVERLOAD             0b0000000100000000
+#define VE_AR_MASK_DC_RIPPLE            0b0000001000000000
+#define VE_AR_MASK_LOW_V_AC_OUT         0b0000010000000000
+#define VE_AR_MASK_HIGH_V_AC_OUT        0b0000100000000000
+#define VE_AR_MASK_SHORT_CIRCUIT        0b0001000000000000
+#define VE_AR_MASK_BMS_LOCKOUT          0b0010000000000000
+
+struct VEDirectHexMsg {
     char *name;
     uint16_t address;
-    enum VEDirectType type;
+    enum VEDirectHexType type;
     float multiplier;
     char *units;
     enum VEReadWriteFlags rw_flags;
     enum VEValidityFlags v_flags;
 };
 
-const struct VEDirectMsg vedirect_lookup[] = {
+// TODO: Not complete.  See below commented out table that needs to be translated into this format.
+const struct VEDirectHexMsg vedirect_hex_lookup[] = {
     { "id",                 0x0100, VE_TYPE_UN32,   1.0,        "",     VE_READ,        VALID_ALL       },
     { "main_voltage",       0xED8D, VE_TYPE_SN16,   0.01,       "V",    VE_READ,        VALID_ALL       },
     { "current_coarse",     0xED8F, VE_TYPE_SN16,   0.1,        "A",    VE_READ,        VALID_ALL       },
     { "soc",                0x0FFF, VE_TYPE_UN16,   0.01,       "%",    VE_READ,        VALID_ALL       },
     { "consumed_ah",        0xEEFF, VE_TYPE_SN32,   0.1,        "Ah",   VE_READ,        VALID_ALL       },
+};
+
+struct VEDirectTextMsg {
+    char *name;
+    char *vreg_name;
+    enum VEDirectTextType type;
+    float multiplier;
+    char *units;
+};
+
+// TODO: Only valid entries for BMV-702 are present.  Extend this to other devices.
+const struct VEDirectTextMsg vedirect_text_lookup[] = {
+    { "main_voltage",           "V",        VE_TYPE_TXT_FLOAT,  0.001,  "V"     }, // Main of channel 1 (battery) voltage
+    { "current_fine",           "I",        VE_TYPE_TXT_FLOAT,  0.001,  "A"     }, // Main of channel 1 (battery) current
+    { "power",                  "P",        VE_TYPE_TXT_INT,    1.0,    "W"     }, // Instantaneous power
+    { "consumed_ah",            "CE",       VE_TYPE_TXT_FLOAT,  0.001,  "Ah"    }, // Consumed Ah
+    { "soc",                    "SOC",      VE_TYPE_TXT_FLOAT,  0.1,    "%"     }, // State-of-charge
+    { "ttg",                    "TTG",      VE_TYPE_TXT_INT,    1.0,    "Min"   }, // Time-to-go
+    { "alarm_state",            "Alarm",    VE_TYPE_TXT_BOOL,   1.0,    ""      }, // Alarm condition active
+    { "relay_state",            "Relay",    VE_TYPE_TXT_BOOL,   1.0,    ""      }, // Relay state
+    { "alarm_reason",           "AR",       VE_TYPE_TXT_INT,    1.0,    ""      }, // Alarm reason
+    { "sw_version",             "FW",       VE_TYPE_TXT_INT,    1.0,    ""      }, // Firmware version
+    { "max_discharge",          "H1",       VE_TYPE_TXT_FLOAT,  0.001,  "Ah"    }, // Depth of deepest discharge
+    { "last_discharge",         "H2",       VE_TYPE_TXT_FLOAT,  0.001,  "Ah"    }, // Depth of last discharge
+    { "average_discharge",      "H3",       VE_TYPE_TXT_FLOAT,  0.001,  "Ah"    }, // Depth of average discharge
+    { "num_cycles",             "H4",       VE_TYPE_TXT_INT,    1.0,    ""      }, // Number of charge cycles
+    { "num_full_discharge",     "H5",       VE_TYPE_TXT_INT,    1.0,    ""      }, // Number of full discharges
+    { "cumulative_ah",          "H6",       VE_TYPE_TXT_FLOAT,  0.001,  "Ah"    }, // Cumulative Ah drawn
+    { "min_voltage",            "H7",       VE_TYPE_TXT_FLOAT,  0.001,  "V"     }, // Minimum main (battery) voltage
+    { "max_voltage",            "H8",       VE_TYPE_TXT_FLOAT,  0.001,  "V"     }, // Maximum main (battery) voltage
+    { "time_since_full_charge", "H9",       VE_TYPE_TXT_INT,    1.0,    "Sec"   }, // Number of seconds since last full charge
+    { "num_auto_sync",          "H10",      VE_TYPE_TXT_INT,    1.0,    ""      }, // Number of automatic synchronizations
+    { "num_low_volt_alarm",     "H11",      VE_TYPE_TXT_INT,    1.0,    ""      }, // Number of low main voltage alarms
+    { "num_high_volt_alarm",    "H12",      VE_TYPE_TXT_INT,    1.0,    ""      }, // Number of high main voltage alarms
+    { "energy_discharged",      "H17",      VE_TYPE_TXT_FLOAT,  0.01,   "kWh"   }, // Amount of discharged energy
+    { "energy_charged",         "H18",      VE_TYPE_TXT_FLOAT,  0.01,   "kWh"   }, // Amount of charged energy
+    { "id",                     "PID",      VE_TYPE_TXT_INT,    1.0,    ""      }, // Product ID
 };
 
 // TODO: Data table copied from first attempt python program, to be translated into above structure
@@ -178,10 +238,10 @@ const struct VEDirectMsg vedirect_lookup[] = {
         'bluetooth_mode':           (0x0090, 'Un8', 1, None, VE_READ | VE_WRITE, VALID_BMV712, None, None, None), # [0: disabled, 1: enabled, 2-7: reserved]
 */
 
-bool ve_lookup_by_name(struct VEDirectMsg *vedirect_msg, const char *name) {
-    for (int i = 0; i < ( sizeof(vedirect_lookup) / sizeof(struct VEDirectMsg) ); i++) {
-        if( !strcmp(name, vedirect_lookup[i].name) ) {
-            *vedirect_msg = vedirect_lookup[i];
+bool ve_lookup_by_hex_name(struct VEDirectHexMsg *vedirect_msg, const char *name) {
+    for (int i = 0; i < ( sizeof(vedirect_hex_lookup) / sizeof(struct VEDirectHexMsg) ); i++) {
+        if( !strcmp(name, vedirect_hex_lookup[i].name) ) {
+            *vedirect_msg = vedirect_hex_lookup[i];
             return true;
         }
     }
@@ -189,10 +249,21 @@ bool ve_lookup_by_name(struct VEDirectMsg *vedirect_msg, const char *name) {
     return false;
 }
 
-bool ve_lookup_by_address(struct VEDirectMsg *vedirect_msg, const unsigned int address) {
-    for (int i = 0; i < ( sizeof(vedirect_lookup) / sizeof(struct VEDirectMsg) ); i++) {
-        if( address == vedirect_lookup[i].address ) {
-            *vedirect_msg = vedirect_lookup[i];
+bool ve_lookup_by_hex_address(struct VEDirectHexMsg *vedirect_msg, const unsigned int address) {
+    for (int i = 0; i < ( sizeof(vedirect_hex_lookup) / sizeof(struct VEDirectHexMsg) ); i++) {
+        if( address == vedirect_hex_lookup[i].address ) {
+            *vedirect_msg = vedirect_hex_lookup[i];
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ve_lookup_by_text_name(struct VEDirectTextMsg *vedirect_msg, const char *name) {
+    for (int i = 0; i < ( sizeof(vedirect_text_lookup) / sizeof(struct VEDirectTextMsg) ); i++) {
+        if( !strcmp(name, vedirect_text_lookup[i].vreg_name) ) {
+            *vedirect_msg = vedirect_text_lookup[i];
             return true;
         }
     }
