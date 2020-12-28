@@ -95,7 +95,7 @@ You can control which of the HEX values are requested and published by modifying
         { true, "current_coarse", 3, 0 },
         { true, "consumed_ah", 3, 0 },
         { true, "main_voltage", 3, 0 },
-};
+    };
 
 ## Contributing
 
