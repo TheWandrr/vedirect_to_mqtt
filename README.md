@@ -20,7 +20,7 @@ Ensuring that the mosquitto MQTT broker is functioning properly is beyond the sc
 
 ### Installing
 
-On a Raspberry Pi 3B+, make sure to disable the serial shell using the configuration tool [Interface Options --> Serial, enable the port but not the shell]
+On a Raspberry Pi 3B+, make sure to disable the serial shell using the configuration tool [Interface Options --> Serial, enable the port but not the shell].  The installation script will copy the executable and start as a service.
 
 	> sudo raspi-config
 
@@ -35,6 +35,7 @@ Get a copy of the project, build and install it
 
 	> cd ~
 	> git clone https://github/com/TheWandrr/vebus_to_mqtt
+	> cd vebus_to_mqtt
 	> sudo make install	
 
 Use the mosquitto_sub tool to verify that MQTT data is being published.  You could also use anything else that subscribes to a MQTT broker, like a smartphone app.
@@ -47,7 +48,6 @@ You should see something like the following repeating at about 1-2 second interv
 	bmv/hex/main_voltage 12.95
 	bmv/hex/consumed_ah -68.30
 	bmv/hex/current_coarse -12.20
-	bmv/hex/soc 65.44
 	bmv/text/max_discharge -160.896
 	bmv/text/last_discharge -68.268
 	bmv/text/average_discharge -38.254
@@ -87,6 +87,15 @@ You should see something like the following repeating at about 1-2 second interv
 	bmv/text/num_high_volt_alarm 0
 	bmv/text/energy_discharged 192.270
 	bmv/text/energy_charged 171.130
+
+You can control which of the HEX values are requested and published by modifying the array in the main source file and rebuilding.
+
+struct VEPeriodicRequest periodic_request_list[] = {
+    { true, "soc", 3, 0 },
+    { true, "current_coarse", 3, 0 },
+    { true, "consumed_ah", 3, 0 },
+    { true, "main_voltage", 3, 0 },
+};
 
 ## Contributing
 
