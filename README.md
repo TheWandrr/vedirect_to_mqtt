@@ -90,11 +90,11 @@ You should see something like the following repeating at about 1-2 second interv
 
 You can control which of the HEX values are requested and published by modifying the array in the main source file and rebuilding.
 
-struct VEPeriodicRequest periodic_request_list[] = {
-    { true, "soc", 3, 0 },
-    { true, "current_coarse", 3, 0 },
-    { true, "consumed_ah", 3, 0 },
-    { true, "main_voltage", 3, 0 },
+    struct VEPeriodicRequest periodic_request_list[] = {
+        { true, "soc", 3, 0 },
+        { true, "current_coarse", 3, 0 },
+        { true, "consumed_ah", 3, 0 },
+        { true, "main_voltage", 3, 0 },
 };
 
 ## Contributing
