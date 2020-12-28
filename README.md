@@ -1,4 +1,4 @@
-# Project Title
+# VED.irect to MQTT Bridging Service
 
 This is a service for bridging Victron Energy's VE.Direct protocol to MQTT.  Originally written and tested using Raspberry Pi 3B+ with Victron BMV-702.  With enough interest and the help of others, this may be expanded to interface with other devices in the same family.
 
