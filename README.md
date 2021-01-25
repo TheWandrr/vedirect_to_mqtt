@@ -32,8 +32,8 @@ Connect the Raspberry Pi's serial port with the device's VE.Direct port.  MAKE S
 Get a copy of the project, build and install it
 
 	> cd ~
-	> git clone https://github/com/TheWandrr/vebus_to_mqtt
-	> cd vebus_to_mqtt
+	> git clone https://github/com/TheWandrr/vedirect_to_mqtt
+	> cd vedirect_to_mqtt
 	> sudo make install	
 
 Use the mosquitto_sub tool to verify that MQTT data is being published.  You could also use anything else that subscribes to a MQTT broker, like a smartphone app.
