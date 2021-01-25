@@ -3,7 +3,7 @@ Description=VE.Direct to MQTT Bridge
 Requires=mosquitto.service
 [Service]
 Type=simple
-ExecStart=/usr/local/lib/vebus_to_mqtt
+ExecStart=/usr/local/lib/vedirect_to_mqtt
 Restart=always
 RestartSec=10
 WatchdogSec=15

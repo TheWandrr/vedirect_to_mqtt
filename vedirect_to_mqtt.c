@@ -11,7 +11,7 @@
 
 #include <mosquitto.h>
 #include <wiringSerial.h>
-#include "vebus.h"
+#include "vedirect.h"
 
 
 // TODO: Parse returned messages, store data in intermediate form

@@ -2,21 +2,20 @@ LDFLAGS = -lwiringPi -lmosquitto -lpthread
 
 #.PHONY: all clean
 
-all : vebus_to_mqtt
+all : vedirect_to_mqtt
 
-vebus_to_mqtt : vebus_to_mqtt.o
+vedirect_to_mqtt : vedirect_to_mqtt.o
 	${CXX} $^ -o $@ ${LDFLAGS}
 
 clean :
-	-rm -f *.o vebus_to_mqtt
+	-rm -f *.o vedirect_to_mqtt
 
 install : all
-	-systemctl stop vebus_to_mqtt
-	chown root:root ./vebus_to_mqtt.service ./vebus_to_mqtt
-	chmod 664 ./vebus_to_mqtt.service
-	cp ./vebus_to_mqtt.service /etc/systemd/system/
-	cp ./vebus_to_mqtt /usr/local/lib/
+	-systemctl stop vedirect_to_mqtt
+	chown root:root ./vedirect_to_mqtt.service ./vedirect_to_mqtt
+	chmod 664 ./vedirect_to_mqtt.service
+	cp ./vedirect_to_mqtt.service /etc/systemd/system/
+	cp ./vedirect_to_mqtt /usr/local/lib/
 	systemctl daemon-reload
-	systemctl enable vebus_to_mqtt
-	systemctl restart vebus_to_mqtt
-
+	systemctl enable vedirect_to_mqtt
+	systemctl restart vedirect_to_mqtt
