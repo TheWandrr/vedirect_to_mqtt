@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 enum VEReadWriteFlags {
     VE_READ = 0b01,
     VE_WRITE = 0b10,
