@@ -11,7 +11,7 @@ Requires mosquitto runtime and development libraries (websockets not used)
 	> sudo apt-get update
 	> sudo apt-get upgrade
 	> sudo apt-get install mosquitto
-	> sudo apt-get install libmosquitto-dev
+	> sudo apt-get install libmosquitto-dev libsystemd-dev
 	> sudo apt-get install mosquitto-clients
 
 Ensuring that the mosquitto MQTT broker is functioning properly is beyond the scope of this document.  There are plenty of other resources, but do make sure it's working before proceeding.
