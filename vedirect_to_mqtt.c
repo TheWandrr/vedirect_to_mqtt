@@ -33,6 +33,7 @@ const char *mqtt_host = "192.168.43.57";
 const unsigned int mqtt_port = 1883;
 const char *bmv_topic_root = "bmv";
 const unsigned int min_request_period_us = 50000; // Too fast and the BMV will miss requests
+const unsigned int sleep_period_us = 50000; // wait time in endless while loops
 
 // TODO: Replace with dynamic FIFO/circular buffer
 unsigned int request_list[32]; // Added to periodically, processed immediately with small delay between
@@ -133,6 +134,7 @@ void *ProcessUARTTransmitQueueThread(void *param) {
             //printf("<<< <UART> %s\r\n", message_buffer);
             usleep(min_request_period_us);
         }
+        usleep(sleep_period_us);
     }
 }
 
@@ -376,11 +378,10 @@ void *ProcessReceiveThread(void *param) {
     char c;
 
     while(running) {
+        // will block for up to 10 sec, if no data available (will return -1 then)
+        c = serialGetchar(fd);
 
-        if(serialDataAvail(fd)) {
-
-            c = serialGetchar(fd);
-
+        if(c > 0) {
             //DEBUG
             //if ( isprint(c) ) {
             //    printf( "%c", c );
@@ -480,6 +481,7 @@ void *ProcessVEDirectRequestThread(void *param) {
                 // TODO: else name is invalid and should be removed or user signalled
             }
         }
+        usleep(sleep_period_us);
     }
 }
 
