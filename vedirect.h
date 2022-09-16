@@ -103,6 +103,11 @@ const struct VEDirectTextMsg vedirect_text_lookup[] = {
     { "main_voltage",           "V",        VE_TYPE_TXT_FLOAT,  0.001,  "V"     }, // Main of channel 1 (battery) voltage
     { "current_fine",           "I",        VE_TYPE_TXT_FLOAT,  0.001,  "A"     }, // Main of channel 1 (battery) current
     { "power",                  "P",        VE_TYPE_TXT_INT,    1.0,    "W"     }, // Instantaneous power
+    { "load_current",           "LI",       VE_TYPE_TXT_FLOAT,  0.001,  "A"     }, // Load current
+    { "pv_voltage",             "VPV",      VE_TYPE_TXT_FLOAT,  0.001,  "V"     }, // PV voltage
+    { "pv_power",               "PPV",      VE_TYPE_TXT_INT,    1.0,    "W"     }, // PV power
+    { "error",                  "ERR",      VE_TYPE_TXT_INT,    1.0,    ""      }, // Error code
+    { "charge_state",           "CS",       VE_TYPE_TXT_INT,    1.0,    ""      }, // Charge state code
     { "consumed_ah",            "CE",       VE_TYPE_TXT_FLOAT,  0.001,  "Ah"    }, // Consumed Ah
     { "soc",                    "SOC",      VE_TYPE_TXT_FLOAT,  0.1,    "%"     }, // State-of-charge
     { "ttg",                    "TTG",      VE_TYPE_TXT_INT,    1.0,    "Min"   }, // Time-to-go
@@ -124,6 +129,11 @@ const struct VEDirectTextMsg vedirect_text_lookup[] = {
     { "num_high_volt_alarm",    "H12",      VE_TYPE_TXT_INT,    1.0,    ""      }, // Number of high main voltage alarms
     { "energy_discharged",      "H17",      VE_TYPE_TXT_FLOAT,  0.01,   "kWh"   }, // Amount of discharged energy
     { "energy_charged",         "H18",      VE_TYPE_TXT_FLOAT,  0.01,   "kWh"   }, // Amount of charged energy
+    { "energy_total",           "H19",      VE_TYPE_TXT_FLOAT,  0.01,   "kWh"   }, // Energy total
+    { "energy_today",           "H20",      VE_TYPE_TXT_FLOAT,  0.01,   "kWh"   }, // Energy today
+    { "max_power_today",        "H21",      VE_TYPE_TXT_FLOAT,  1.0,    "W"     }, // Max power today
+    { "energy_yesterday",       "H22",      VE_TYPE_TXT_FLOAT,  0.01,   "kWh"   }, // Energy yesterday
+    { "max_power_yesterday",    "H23",      VE_TYPE_TXT_FLOAT,  1.0,    "W"     }, // Max power yesterday
     { "id",                     "PID",      VE_TYPE_TXT_INT,    1.0,    ""      }, // Product ID
 };
 
