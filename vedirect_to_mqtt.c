@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <pthread.h>
+#include <systemd/sd-daemon.h>
 
 #include <mosquitto.h>
 #include <wiringSerial.h>
@@ -566,6 +567,7 @@ int main ()
         }
 
         sleep(1);
+        sd_notify(0, "WATCHDOG=1");
     }
 
     printf("Waiting for threads to terminate...\r\n");

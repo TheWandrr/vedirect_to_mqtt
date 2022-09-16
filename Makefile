@@ -1,4 +1,4 @@
-LDFLAGS = -lwiringPi -lmosquitto -lpthread
+LDFLAGS = -lwiringPi -lmosquitto -lsystemd -lpthread
 
 #.PHONY: all clean
 
